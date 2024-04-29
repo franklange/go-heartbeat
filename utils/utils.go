@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var dbg = os.Getenv("PB_DEBUG")
+var dbg = os.Getenv("HB_DEBUG")
 
 func Debug() bool {
 	return (dbg != "")

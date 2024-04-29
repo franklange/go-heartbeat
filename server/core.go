@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 )
@@ -21,7 +20,7 @@ func NewCore() Core {
 func (core *Core) add(c Client) bool {
 	_, found := core.clients[c]
 	if found {
-		slog.Debug(fmt.Sprintln("client exists: ", c))
+		slog.Debug("client exists")
 		return false
 	}
 
@@ -36,7 +35,7 @@ func (core *Core) beat(c Client) bool {
 func (core *Core) beat_at(c Client, t Timestamp) bool {
 	ts, found := core.clients[c]
 	if !found {
-		slog.Debug("not found", "client", c)
+		slog.Debug("client not found")
 		return false
 	}
 
