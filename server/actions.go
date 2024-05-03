@@ -1,9 +1,11 @@
 package main
 
+import "time"
+
 const (
-	TagRegister  = "reg"
-	TagHeartbeat = "beat"
-	TagPrune     = "prune"
+	TagRegister = "reg"
+	TagBeat     = "beat"
+	TagPrune    = "prune"
 )
 
 type Action struct {
@@ -18,22 +20,23 @@ type Register struct {
 
 type Beat struct {
 	id    string
+	ts    time.Time
 	reply chan<- bool
 }
 
 type Prune struct {
+	ts    time.Time
 	reply chan<- []string
 }
 
-type Update struct {
-	tag    string
-	update any
+func NewRegister(id string, reply chan<- bool) Action {
+	return Action{TagRegister, Register{id, reply}}
 }
 
-type RegisterUpdate struct {
-	id string
+func NewBeat(id string, t time.Time, reply chan<- bool) Action {
+	return Action{TagBeat, Beat{id, t, reply}}
 }
 
-type PruneUpdate struct {
-	ids []string
+func NewPrune(reply chan<- []string) Action {
+	return Action{TagPrune, Prune{time.Now(), reply}}
 }

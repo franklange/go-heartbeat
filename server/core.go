@@ -1,69 +1,107 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 )
 
 type Client = string
-type Timestamp = time.Time
-type Timestamps = []time.Time
 
 type Core struct {
-	clients map[Client]Timestamps
+	clients    map[Client][]time.Time
+	actions    chan Action
+	registered chan Client
+	expired    chan []Client
 }
 
-func NewCore() Core {
-	return Core{make(map[string][]time.Time)}
+func NewCore(inbuf int, outbuf int) Core {
+	return Core{make(map[Client][]time.Time), make(chan Action, inbuf), make(chan string, outbuf), make(chan []string, outbuf)}
 }
 
-func (core *Core) add(c Client) bool {
-	_, found := core.clients[c]
-	if found {
-		slog.Debug("client exists")
-		return false
+func (core *Core) runOne() {
+	a := <-core.actions
+	slog.Debug(fmt.Sprint(a))
+	core.route(a)
+}
+
+func (core *Core) runAll() {
+	for len(core.actions) > 0 {
+		core.runOne()
+	}
+}
+
+func (core *Core) runForever() {
+	for {
+		core.runOne()
+	}
+}
+
+func (core *Core) route(a Action) {
+	if a.tag == TagRegister {
+		core.register(a.action.(Register))
+		return
 	}
 
-	core.clients[c] = Timestamps{}
-	return true
+	if a.tag == TagBeat {
+		core.beat(a.action.(Beat))
+		return
+	}
+
+	if a.tag == TagPrune {
+		core.prune(a.action.(Prune))
+		return
+	}
+	slog.Debug("unknown action")
 }
 
-func (core *Core) beat(c Client) bool {
-	return core.beat_at(c, time.Now())
+func (core *Core) register(r Register) {
+	_, found := core.clients[r.id]
+	if found {
+		slog.Debug("client exists")
+		r.reply <- false
+		return
+	}
+	core.clients[r.id] = []time.Time{}
+	slog.Debug("register", "client", r.id)
+
+	r.reply <- true
+	core.registered <- r.id
 }
 
-func (core *Core) beat_at(c Client, t Timestamp) bool {
-	ts, found := core.clients[c]
+func (core *Core) beat(b Beat) {
+	ts, found := core.clients[b.id]
 	if !found {
 		slog.Debug("client not found")
-		return false
+		b.reply <- false
+		return
 	}
 
 	if len(ts) == 0 {
-		core.clients[c] = append(ts, t)
-		return true
+		core.clients[b.id] = append(ts, b.ts)
+		b.reply <- true
+		slog.Debug("beat", "client", b.id)
+		return
 	}
 
 	last := ts[len(ts)-1]
-	if t.Before(last) {
+	if b.ts.Before(last) {
 		slog.Debug("outdated timestamp")
-		return false
+		b.reply <- false
+		return
 	}
 
 	if len(ts) < 5 {
-		core.clients[c] = append(ts, t)
+		core.clients[b.id] = append(ts, b.ts)
 	} else {
-		core.clients[c] = append(ts[1:], t)
+		core.clients[b.id] = append(ts[1:], b.ts)
 	}
+	slog.Debug("beat", "client", b.id)
 
-	return true
+	b.reply <- true
 }
 
-func (core *Core) prune() []Client {
-	return core.prune_at(time.Now())
-}
-
-func (core *Core) prune_at(t time.Time) []Client {
+func (core *Core) prune(p Prune) {
 	res := []Client{}
 
 	for k, v := range core.clients {
@@ -74,17 +112,18 @@ func (core *Core) prune_at(t time.Time) []Client {
 		}
 
 		last := v[len(v)-1]
-		if t.Before(last) {
+		if p.ts.Before(last) {
 			slog.Debug("prune ts in the past")
 			continue
 		}
 
-		if t.Sub(last) < (5 * time.Second) {
+		if p.ts.Sub(last) < (5 * time.Second) {
 			continue
 		}
 
 		res = append(res, k)
 		delete(core.clients, k)
 	}
-	return res
+	p.reply <- res
+	core.expired <- res
 }
