@@ -1,4 +1,4 @@
-package main
+package lib
 
 import "time"
 
@@ -29,14 +29,14 @@ type Prune struct {
 	reply chan<- []string
 }
 
-func NewRegister(id string, reply chan<- bool) Action {
+func newRegister(id string, reply chan<- bool) Action {
 	return Action{TagRegister, Register{id, reply}}
 }
 
-func NewBeat(id string, t time.Time, reply chan<- bool) Action {
+func newBeat(id string, t time.Time, reply chan<- bool) Action {
 	return Action{TagBeat, Beat{id, t, reply}}
 }
 
-func NewPrune(reply chan<- []string) Action {
-	return Action{TagPrune, Prune{time.Now(), reply}}
+func newPrune(t time.Time, reply chan<- []string) Action {
+	return Action{TagPrune, Prune{t, reply}}
 }

@@ -1,7 +1,6 @@
-package main
+package lib
 
 import (
-	"fmt"
 	"log/slog"
 	"time"
 )
@@ -9,19 +8,16 @@ import (
 type Client = string
 
 type Core struct {
-	clients    map[Client][]time.Time
-	actions    chan Action
-	registered chan Client
-	expired    chan []Client
+	clients map[Client][]time.Time
+	actions chan Action
 }
 
-func NewCore(inbuf int, outbuf int) Core {
-	return Core{make(map[Client][]time.Time), make(chan Action, inbuf), make(chan string, outbuf), make(chan []string, outbuf)}
+func NewCore() *Core {
+	return &Core{make(map[Client][]time.Time), make(chan Action, 10)}
 }
 
 func (core *Core) runOne() {
 	a := <-core.actions
-	slog.Debug(fmt.Sprint(a))
 	core.route(a)
 }
 
@@ -66,7 +62,6 @@ func (core *Core) register(r Register) {
 	slog.Debug("register", "client", r.id)
 
 	r.reply <- true
-	core.registered <- r.id
 }
 
 func (core *Core) beat(b Beat) {
@@ -125,5 +120,4 @@ func (core *Core) prune(p Prune) {
 		delete(core.clients, k)
 	}
 	p.reply <- res
-	core.expired <- res
 }

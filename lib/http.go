@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"encoding/json"
@@ -52,7 +52,7 @@ func (handler *RegisterHandler) ServeHTTP(w http.ResponseWriter, request *http.R
 	}
 
 	reply := make(chan bool, 1)
-	handler.actions <- NewRegister(regHttp.Id, reply)
+	handler.actions <- newRegister(regHttp.Id, reply)
 
 	ok := <-reply
 	if !ok {
@@ -74,7 +74,7 @@ func (handler *BeatHandler) ServeHTTP(w http.ResponseWriter, request *http.Reque
 	}
 
 	reply := make(chan bool, 1)
-	handler.actions <- NewBeat(beatHttp.Id, time.Now(), reply)
+	handler.actions <- newBeat(beatHttp.Id, time.Now(), reply)
 
 	ok := <-reply
 	if !ok {

@@ -4,30 +4,31 @@ import (
 	"log"
 	"log/slog"
 
-	"github.com/franklange/go-heartbeat/utils"
+	hb "github.com/franklange/go-heartbeat/lib"
 )
 
 func main() {
-	log.SetFlags(log.Lshortfile)
+	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
 
-	if utils.Debug() {
+	if hb.Debug() {
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	}
 
-	hbServer := NewHeartbeatServer(HeartbeatConf{
-		port:       9000,
-		regRoute:   "/register",
-		beatRoute:  "/beat",
-		inBufSize:  10,
-		outBufSize: 10,
+	hbServer := hb.NewServer(&hb.Config{
+		Port:       9000,
+		RegRoute:   "/register",
+		BeatRoute:  "/beat",
+		InBufSize:  10,
+		OutBufSize: 10,
 	})
+	defer hbServer.Stop()
 
-	select {
-	case id := <-hbServer.registered:
-		slog.Info("new client", "client", id)
-	case deads := <-hbServer.expired:
-		slog.Info("clients lost", "expired", deads)
+	for {
+		select {
+		case id := <-hbServer.Registered:
+			slog.Info("new client", "client", id)
+		case deads := <-hbServer.Expired:
+			slog.Info("clients lost", "expired", deads)
+		}
 	}
-
-	hbServer.stop()
 }
