@@ -8,6 +8,20 @@ import (
 )
 
 func main() {
-	h := hb.Heartbeats{Timeout: 1 * time.Second}
-	fmt.Println(&h)
+	s := hb.NewServer(&hb.ServerConfig{
+		HttpConfig:     &hb.HttpConfig{Port: 9000, Url: "/heartbeats"},
+		PrunteInterval: 5 * time.Second,
+	})
+	defer s.Stop()
+
+	for {
+		select {
+		case c := <-s.Alive:
+			fmt.Println("alive: ", c)
+			break
+		case cs := <-s.Dead:
+			fmt.Println("dead: ", cs)
+			break
+		}
+	}
 }

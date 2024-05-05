@@ -2,9 +2,7 @@ package heartbeat
 
 import (
 	"slices"
-	"strings"
 	"testing"
-	"time"
 )
 
 func expect(cond bool, t *testing.T, msg string, args ...any) {
@@ -13,118 +11,83 @@ func expect(cond bool, t *testing.T, msg string, args ...any) {
 	}
 }
 
-func advanceS(n int) time.Time {
-	return time.Now().Add(time.Duration(n) * time.Second)
-}
-
-func split(ids string) []string {
-	if len(ids) == 0 {
-		return []string{}
-	}
-	return strings.Split(strings.ReplaceAll(ids, " ", ""), ",")
-}
-
-func (h *Heartbeats) hasClients(ids string) bool {
-	clients := split(ids)
-	if len(clients) != h.NumClients() {
+func eq(a, b []string) bool {
+	if len(a) != len(b) {
 		return false
 	}
-	for _, v := range clients {
-		if !h.HasClient(v) {
-			return false
-		}
-	}
-	return true
-}
-
-func eq(a, b []string) bool {
 	slices.Sort(a)
 	slices.Sort(b)
 	return (slices.Compare(a, b) == 0)
 }
 
-func newHeartbeats() *Heartbeats {
-	return NewHeartbeats(5 * time.Second)
+func TestHasClientEmpty(t *testing.T) {
+	h := NewHeartbeats()
+
+	have := h.HasClient("c1")
+	want := false
+
+	expect(have == want, t, "has client empty")
 }
 
-func TestRegisterSingleClient(t *testing.T) {
-	h := newHeartbeats()
+func TestHasClient(t *testing.T) {
+	h := NewHeartbeats()
+	h.Beat("c1")
 
-	ok := h.Register("c1")
-	expect(ok && h.hasClients("c1"), t, "register")
+	have := h.HasClient("c1")
+	want := true
+
+	expect(have == want, t, "has client")
 }
 
-func TestRegisterSameClient(t *testing.T) {
-	h := newHeartbeats()
+func TestBeatEmpty(t *testing.T) {
+	h := NewHeartbeats()
+	h.Beat("c1")
 
-	ok := h.Register("c1")
-	expect(ok && h.hasClients("c1"), t, "register")
+	have := h.numBeats("c1")
+	want := 3
 
-	ok = h.Register("c1")
-	expect(!ok && h.hasClients("c1"), t, "re-register")
+	expect(have == want, t, "beat init")
 }
 
-func TestRegisterMultiClient(t *testing.T) {
-	h := newHeartbeats()
+func TestBeatIncrements(t *testing.T) {
+	h := NewHeartbeats()
+	h.clients["c1"] = 1
+	h.Beat("c1")
 
-	ok := h.Register("c1")
-	expect(ok && h.hasClients("c1"), t, "first client")
+	have := h.numBeats("c1")
+	want := 2
 
-	ok = h.Register("c2")
-	expect(ok && h.hasClients("c1, c2"), t, "second client")
+	expect(have == want, t, "beat increment")
 }
 
-func TestBeatUnknownClient(t *testing.T) {
-	h := newHeartbeats()
+func TestBeatCap(t *testing.T) {
+	h := NewHeartbeats()
+	h.Beat("c1")
+	h.Beat("c1")
 
-	ok := h.Beat("c1")
-	expect(!ok && h.hasClients(""), t, "unknown client")
+	have := h.numBeats("c1")
+	want := 3
+
+	expect(have == want, t, "beat cap")
 }
 
-func TestBeatSingleClient(t *testing.T) {
-	h := newHeartbeats()
-	h.Register("c1")
+func TestBeatMultiClient(t *testing.T) {
+	h := NewHeartbeats()
+	h.clients["c1"] = 1
+	h.clients["c2"] = 2
+	h.Beat("c1")
 
-	ok := h.beat_at("c1", advanceS(1))
-	expect(ok && h.hasClients("c1"), t, "beat")
-}
+	have := h.numBeats("c1")
+	want := 2
+	expect(have == want, t, "beat multi client inc")
 
-func TestBeatSingleClientMultiBeats(t *testing.T) {
-	h := newHeartbeats()
-	h.Register("c1")
-
-	ok := h.beat_at("c1", advanceS(1))
-	expect(ok && h.hasClients("c1"), t, "first beat")
-
-	ok = h.beat_at("c1", advanceS(1))
-	expect(ok && h.hasClients("c1"), t, "second beat")
-}
-
-func TestBeatMulitClientMultiBeats(t *testing.T) {
-	h := newHeartbeats()
-	h.Register("c1")
-	h.Register("c2")
-
-	ok := h.beat_at("c1", advanceS(1))
-	expect(ok && h.hasClients("c1, c2"), t, "first c1")
-
-	ok = h.beat_at("c2", advanceS(2))
-	expect(ok && h.hasClients("c1, c2"), t, "first c2")
-
-	ok = h.beat_at("c1", advanceS(3))
-	expect(ok && h.hasClients("c1, c2"), t, "second c1")
-}
-
-func TestBeatOutdated(t *testing.T) {
-	h := newHeartbeats()
-	h.register_at("c1", advanceS(3))
-
-	ok := h.Beat("c1")
-	expect(!ok && h.hasClients("c1"), t, "outdated beat")
+	have = h.numBeats("c2")
+	want = 2
+	expect(have == want, t, "beat multi client no change")
 }
 
 func TestPruneEmpty(t *testing.T) {
-	h := newHeartbeats()
+	h := NewHeartbeats()
 
 	have := h.Prune()
 	want := []string{}
@@ -132,63 +95,57 @@ func TestPruneEmpty(t *testing.T) {
 	expect(eq(have, want), t, "prune empty")
 }
 
-func TestPruneSingleClientDead(t *testing.T) {
-	h := newHeartbeats()
-
-	h.Register("c1")
-	h.beat_at("c1", advanceS(1))
-
-	have := h.prune_at(advanceS(10))
-	want := []string{"c1"}
-
-	expect(eq(have, want), t, "single client dead")
-}
-
 func TestPruneSingleClientAlive(t *testing.T) {
-	h := newHeartbeats()
-
-	h.Register("c1")
-	h.beat_at("c1", advanceS(1))
-
-	have := h.prune_at(advanceS(2))
-	want := []string{}
-
-	expect(eq(have, want), t, "single client alive")
-}
-
-func TestPruneMultiClientAllDead(t *testing.T) {
-	h := newHeartbeats()
-
-	h.Register("c1")
-	h.Register("c2")
-
-	have := h.prune_at(advanceS(12))
-	want := []string{"c1", "c2"}
-
-	expect(eq(have, want), t, "prune all dead")
-}
-
-func TestPruneMultiClientSomeDead(t *testing.T) {
-	h := newHeartbeats()
-
-	h.Register("c1")
-	h.Register("c2")
-	h.beat_at("c1", advanceS(3))
-
-	have := h.prune_at(advanceS(6))
-	want := []string{"c2"}
-
-	expect(eq(have, want), t, "prune some dead")
-}
-
-func TestPruneInThePast(t *testing.T) {
-	h := newHeartbeats()
-
-	h.register_at("c1", advanceS(10))
-	h.register_at("c2", advanceS(11))
+	h := NewHeartbeats()
+	h.Beat("c1")
 
 	have := h.Prune()
 	want := []string{}
 
-	expect(eq(have, want), t, "prune in the past")
+	expect(eq(have, want), t, "prune single alive")
+}
+
+func TestPruneSingleClientDead(t *testing.T) {
+	h := NewHeartbeats()
+	h.clients["c1"] = 2
+	h.Prune()
+
+	have := h.Prune()
+	want := []string{"c1"}
+
+	expect(eq(have, want), t, "prune single dead")
+
+}
+
+func TestPruneMultiClientAllAlice(t *testing.T) {
+	h := NewHeartbeats()
+	h.Beat("c1")
+	h.Beat("c2")
+
+	have := h.Prune()
+	want := []string{}
+
+	expect(eq(have, want), t, "prune multi all alive")
+}
+
+func TestPruneMultiClientAllDead(t *testing.T) {
+	h := NewHeartbeats()
+	h.clients["c1"] = 0
+	h.clients["c2"] = 1
+
+	have := h.Prune()
+	want := []string{"c1", "c2"}
+
+	expect(eq(have, want), t, "prune multi all dead")
+}
+
+func TestPruneMultiClientSomeDead(t *testing.T) {
+	h := NewHeartbeats()
+	h.clients["c1"] = 2
+	h.clients["c2"] = 1
+
+	have := h.Prune()
+	want := []string{"c2"}
+
+	expect(eq(have, want), t, "prune multi some dead")
 }

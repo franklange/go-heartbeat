@@ -2,83 +2,69 @@ package heartbeat
 
 import (
 	"sync"
-	"time"
 )
 
 type Heartbeats struct {
-	Timeout time.Duration
-
-	mu  sync.Mutex
-	ids map[string]time.Time
+	mu      sync.Mutex
+	clients map[string]int
 }
 
-func NewHeartbeats(d time.Duration) *Heartbeats {
-	return &Heartbeats{ids: make(map[string]time.Time), Timeout: d}
+func NewHeartbeats() *Heartbeats {
+	return &Heartbeats{clients: make(map[string]int)}
 }
 
 func (h *Heartbeats) NumClients() int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	return len(h.ids)
+	return len(h.clients)
 }
 
 func (h *Heartbeats) HasClient(id string) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	_, found := h.ids[id]
+	_, found := h.clients[id]
 	return found
 }
 
-func (h *Heartbeats) Register(id string) bool {
+func (h *Heartbeats) Beat(id string) int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	return h.register_at(id, time.Now())
-}
-
-func (h *Heartbeats) Beat(id string) bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	return h.beat_at(id, time.Now())
+	count, found := h.clients[id]
+	if !found {
+		h.clients[id] = 3
+	} else {
+		h.clients[id] = min((count + 1), 3)
+	}
+	return h.clients[id]
 }
 
 func (h *Heartbeats) Prune() []string {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	return h.prune_at(time.Now())
-}
-
-func (h *Heartbeats) register_at(id string, t time.Time) bool {
-	_, found := h.ids[id]
-	if found {
-		return false
-	}
-	h.ids[id] = t
-	return true
-}
-
-func (h *Heartbeats) beat_at(id string, t time.Time) bool {
-	last, found := h.ids[id]
-	if !found || t.Before(last) {
-		return false
-	}
-
-	h.ids[id] = t
-	return true
-}
-
-func (h *Heartbeats) prune_at(t time.Time) []string {
 	var res []string
-	for k, v := range h.ids {
-		if t.Before(v) || (t.Sub(v) < h.Timeout) {
-			continue
+	for client, count := range h.clients {
+		count--
+		if count <= 0 {
+			res = append(res, client)
+			delete(h.clients, client)
+		} else {
+			h.clients[client] = count
 		}
-		res = append(res, k)
 	}
-
 	return res
+}
+
+func (h *Heartbeats) numBeats(id string) int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	beats, found := h.clients[id]
+	if !found {
+		return -1
+	}
+	return beats
 }
