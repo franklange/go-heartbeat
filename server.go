@@ -30,6 +30,7 @@ func NewServer(config *ServerConfig) *Server {
 	s := &Server{
 		Alive: make(chan string, 10),
 		Dead:  make(chan []string, 10),
+		quit:  make(chan bool, 1),
 	}
 	s.heartbeats = NewHeartbeats()
 	go s.pruneRunner(config.PrunteInterval)
