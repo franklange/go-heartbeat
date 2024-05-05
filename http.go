@@ -57,7 +57,7 @@ func (h *httpListener) postBeat() http.HandlerFunc {
 			return
 		}
 		count := h.heartbeats.Beat(beat.Id)
-		if count == 3 {
+		if count > 3 {
 			h.alive <- beat.Id
 		}
 	}

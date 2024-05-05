@@ -34,7 +34,7 @@ func (h *Heartbeats) Beat(id string) int {
 
 	count, found := h.clients[id]
 	if !found {
-		h.clients[id] = 3
+		h.clients[id] = 4
 	} else {
 		h.clients[id] = min((count + 1), 3)
 	}
