@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	hb "github.com/franklange/go-heartbeat"
+	"github.com/franklange/go-scanln"
 )
 
 func main() {
@@ -17,12 +17,13 @@ func main() {
 	})
 	defer hbc.Stop()
 
-	var input string
+	input := scanln.NewScanln()
+	defer input.Stop()
+
 	for {
-		fmt.Scanln(&input)
-		if input == "q" {
-			break
+		q := <-input.C
+		if q == "q" {
+			return
 		}
-		fmt.Println(input)
 	}
 }
