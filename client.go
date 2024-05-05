@@ -41,6 +41,7 @@ func (c *Client) Stop() {
 }
 
 func (c *Client) run() {
+	c.send()
 	t := time.NewTicker(c.interval)
 
 	for {
