@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package heartbeat;
+option go_package = "/proto";
+
+import "google/protobuf/empty.proto";
+
+message Beat {
+    string clientId = 1;
+}
+
+service Heartbeat {
+    rpc Connect(stream Beat) returns (google.protobuf.Empty) {}
+}
+
