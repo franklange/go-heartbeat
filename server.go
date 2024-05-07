@@ -2,7 +2,6 @@ package heartbeat
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
 
@@ -49,9 +48,8 @@ func (s *Server) Connect(stream proto.Heartbeat_ConnectServer) error {
 	for {
 		beat, err := stream.Recv()
 		if err != nil {
-			if (err == io.EOF) && (id != "") {
+			if id != "" {
 				s.Dead <- id
-				return nil
 			}
 			return err
 		}

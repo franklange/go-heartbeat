@@ -13,9 +13,9 @@ func main() {
 	for {
 		select {
 		case c := <-s.Alive:
-			fmt.Println("alive: ", c)
+			fmt.Println("conn:", c)
 		case c := <-s.Dead:
-			fmt.Println("dead: ", c)
+			fmt.Println("dead:", c)
 		}
 	}
 }
