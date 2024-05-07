@@ -3,7 +3,7 @@ module github.com/franklange/go-heartbeat
 go 1.22.2
 
 require (
-	github.com/franklange/go-scanln v0.0.0-20240505200202-e1271e7ed825 // indirect
+	github.com/franklange/go-scanln v0.0.0-20240507213332-35c9012cc043 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect

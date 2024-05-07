@@ -1,5 +1,7 @@
 github.com/franklange/go-scanln v0.0.0-20240505200202-e1271e7ed825 h1:QULnxikkp47uziwyKKYRNbO+6CHcGF5H3nGzgsWVS6w=
 github.com/franklange/go-scanln v0.0.0-20240505200202-e1271e7ed825/go.mod h1:iIZyBymoQXzx2GidkrPhbT2xjsu0wdqwJ/1u7vpm/ts=
+github.com/franklange/go-scanln v0.0.0-20240507213332-35c9012cc043 h1:IN+Vv6HVw+oxLLUJv82ZB3bOG2q6HIp04G5CeU9CF74=
+github.com/franklange/go-scanln v0.0.0-20240507213332-35c9012cc043/go.mod h1:iIZyBymoQXzx2GidkrPhbT2xjsu0wdqwJ/1u7vpm/ts=
 golang.org/x/net v0.25.0 h1:d/OCCoBEUq33pjydKrGQhw7IlUPI2Oylr+8qLx49kac=
 golang.org/x/net v0.25.0/go.mod h1:JkAGAh7GEvH74S6FOH42FLoXpXbE/aqXSrIQjXgsiwM=
 golang.org/x/sys v0.20.0 h1:Od9JTbYCk261bKm4M/mw7AklTlFYIa0bIp9BgSm1S8Y=
