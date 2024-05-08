@@ -7,20 +7,26 @@ import (
 
 	"github.com/franklange/go-heartbeat/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/peer"
 )
+
+type Peer struct {
+	Id   string
+	Addr string
+}
 
 type Server struct {
 	proto.UnimplementedHeartbeatServer
 	grpcServer *grpc.Server
 
-	Dead  chan string
-	Alive chan string
+	Dead  chan Peer
+	Alive chan Peer
 }
 
 func NewHeartbeatServer(port string) *Server {
 	s := &Server{
-		Dead:       make(chan string, 100),
-		Alive:      make(chan string, 100),
+		Dead:       make(chan Peer, 100),
+		Alive:      make(chan Peer, 100),
 		grpcServer: grpc.NewServer(),
 	}
 
@@ -44,20 +50,28 @@ func (s *Server) Stop() {
 }
 
 func (s *Server) Connect(stream proto.Heartbeat_ConnectServer) error {
-	var id string
+	var p Peer
 	for {
 		beat, err := stream.Recv()
 		if err != nil {
-			if id != "" {
-				s.Dead <- id
+			if p.Id != "" {
+				s.Dead <- p
 			}
 			return err
 		}
-		if id != "" {
+		if p.Id != "" {
 			continue
 		}
 
-		id = beat.ClientId
-		s.Alive <- id
+		p.Id = beat.ClientId
+		pp, ok := peer.FromContext(stream.Context())
+		if !ok {
+			p.Addr = "unknown"
+		} else {
+			p.Addr = pp.Addr.String()
+		}
+
+		s.Alive <- p
 	}
+
 }
