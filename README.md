@@ -1,8 +1,8 @@
 # go-heartbeat
 
-Simple server and client libraries to monitor client connectivity via heartbeats using gRPC client-side streaming.  
-The server library provides client connects/disconnects via channels `Alive` and `Dead`.  
-The client library uses `Interval` to either automatically (re)connect to the given server address or to send heartbeats for the provided client id.  
+Simple server/client library to monitor connectivity via heartbeats using gRPC client-side streaming.  
+The server provides `Peer` events with `Id` and `Addr` via channels `Alive` and `Dead`.  
+The client automatically (re)connects and sends heartbeats with the user-provided `Id` with `Interval` frequency.  
 
 ### Example Server
 
@@ -22,12 +22,13 @@ func main() {
 	for {
 		select {
 		case c := <-s.Alive:
-			fmt.Println("conn:", c)
+			fmt.Printf("[conn] id: %s addr: %s\n", c.Id, c.Addr)
 		case c := <-s.Dead:
-			fmt.Println("dead:", c)
+			fmt.Printf("[dead] id: %s addr: %s\n", c.Id, c.Addr)
 		}
 	}
 }
+
 ```
 
 ### Example Client
