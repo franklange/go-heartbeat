@@ -14,7 +14,5 @@ func main() {
 	})
 	defer c.Stop()
 
-	for {
-		time.Sleep(time.Second)
-	}
+	select {}
 }
